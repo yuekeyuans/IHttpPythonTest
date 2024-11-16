@@ -6,8 +6,7 @@
 
 $IPackageBegin(IPubCore, IHttpPythonTest)
 
-class IHttpPythonTestTask
-    : public ITestTaskInterface<IHttpPythonTestTask>//, public IClassNameUnit<IHttpPythonTestTask>
+class IHttpPythonTestTask : public ITestTaskInterface<IHttpPythonTestTask>
 {
 public:
     IHttpPythonTestTask() = default;
@@ -16,13 +15,20 @@ public:
     virtual void $task() final;
 
 private:
-    QString getScriptDir();
+    bool isTaskEnabled();
     void checkPytestExist();
     void checkScriptDir();
+
+private:
+    QString getScriptDir();
+    QString getContextScriptDir();
+    QString getApplicationScriptDir();
+    QString getSourceRootScriptDir();
+
+private:
     void startTest();
     void openTest();
     void writeDebugInfo();
 };
-
 
 $IPackageEnd(IPubCore, IHttpPythonTest)

@@ -7,11 +7,14 @@ $IPackageBegin(IPubCore, IHttpPythonTest)
 void IHttpPythonTestTask::$task()
 {
     std::thread thread([&](){
-        checkPytestExist();
-        checkScriptDir();
-
-        if(getScriptDir().isEmpty()){
+        if(!isTaskEnabled()){
+            qDebug() << CLASS_NAME << "disabled";
             return;
+        }
+        checkPytestExist();
+        auto scriptDir = getScriptDir();
+        if(scriptDir.isEmpty()){
+            qDebug() << CLASS_NAME << "script dir not exist";
         }
 
         startTest();
@@ -19,20 +22,13 @@ void IHttpPythonTestTask::$task()
     thread.detach();
 }
 
-QString IHttpPythonTestTask::getScriptDir()
+bool IHttpPythonTestTask::isTaskEnabled()
 {
-    $ContextQString contextPath{CLASS_NAME.toStdString()+"/scriptDir"};
-    if(contextPath.isLoadedValue()){
-        return contextPath.value();
+    $ContextBool pyTestEnabled{"/test/pytest/enabled", true};
+    if(!pyTestEnabled.value()){
+        return false;
     }
-
-    auto path = QFileInfo(IAsioApplication::instance()->arguments().first()).absolutePath() + "/pytest";
-    qDebug() << path;
-    if(QDir(path).exists()){
-        return path;
-    }
-
-    return {};
+    return true;
 }
 
 void IHttpPythonTestTask::checkPytestExist()
@@ -72,6 +68,58 @@ void IHttpPythonTestTask::checkScriptDir()
         QString tip = CLASS_NAME + " script dir not found";
         qWarning() << tip << endl;
     }
+}
+
+QString IHttpPythonTestTask::getScriptDir()
+{
+    QVector<decltype(&IHttpPythonTestTask::getContextScriptDir)> funs{
+        &IHttpPythonTestTask::getApplicationScriptDir,
+        &IHttpPythonTestTask::getContextScriptDir,
+        &IHttpPythonTestTask::getSourceRootScriptDir
+    };
+
+    for(auto fun : funs){
+        QString value = std::mem_fn(fun)(this);
+        if(!value.isEmpty()){
+            return value;
+        }
+    }
+    return {};
+}
+
+QString IHttpPythonTestTask::getContextScriptDir()
+{
+    $ContextQString path{"/test/pytest/scriptDir"};
+    return path.value();
+}
+
+QString IHttpPythonTestTask::getApplicationScriptDir()
+{
+    auto path = QFileInfo(IAsioApplication::instance()->arguments().first()).absolutePath() + "/pytest";
+    if(QDir(path).exists()){
+        return path;
+    }
+    path = QFileInfo(IAsioApplication::instance()->arguments().first()).absolutePath() + "/test/pytest";
+    if(QDir(path).exists()){
+        return path;
+    }
+    return {};
+}
+
+QString IHttpPythonTestTask::getSourceRootScriptDir()
+{
+#ifdef QMAKE_PROJECT_DIR
+    auto path = QString(QMAKE_PROJECT_DIR) + "/pytest";
+    if(QDir(path).exists()){
+        return path;
+    }
+
+    path = QString(QMAKE_PROJECT_DIR) + "/test/pytest";
+    if(QDir(path).exists()){
+        return path;
+    }
+#endif
+    return {};
 }
 
 void IHttpPythonTestTask::startTest()
