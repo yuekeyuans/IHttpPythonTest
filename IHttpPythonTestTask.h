@@ -17,7 +17,6 @@ public:
 private:
     bool isTaskEnabled();
     void checkPytestExist();
-    void checkScriptDir();
 
 private:
     QString getScriptDir();
@@ -29,6 +28,9 @@ private:
     void startTest();
     void openTest();
     void writeDebugInfo();
+
+private:
+    QString m_scriptDir;
 };
 
 $IPackageEnd(IPubCore, IHttpPythonTest)

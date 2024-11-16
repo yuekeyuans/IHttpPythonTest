@@ -12,9 +12,11 @@ void IHttpPythonTestTask::$task()
             return;
         }
         checkPytestExist();
-        auto scriptDir = getScriptDir();
-        if(scriptDir.isEmpty()){
+
+        m_scriptDir = getScriptDir();
+        if(m_scriptDir.isEmpty()){
             qDebug() << CLASS_NAME << "script dir not exist";
+            return;
         }
 
         startTest();
@@ -62,14 +64,6 @@ void IHttpPythonTestTask::checkPytestExist()
     }
 }
 
-void IHttpPythonTestTask::checkScriptDir()
-{
-    if(getScriptDir().isEmpty()){
-        QString tip = CLASS_NAME + " script dir not found";
-        qWarning() << tip << endl;
-    }
-}
-
 QString IHttpPythonTestTask::getScriptDir()
 {
     QVector<decltype(&IHttpPythonTestTask::getContextScriptDir)> funs{
@@ -90,6 +84,12 @@ QString IHttpPythonTestTask::getScriptDir()
 QString IHttpPythonTestTask::getContextScriptDir()
 {
     $ContextQString path{"/test/pytest/scriptDir"};
+    if(path.value().isEmpty()){
+        return {};
+    }
+    if(!QDir(path.value()).exists()){
+        qDebug() << path.value() << "script dir not exist";
+    }
     return path.value();
 }
 
@@ -125,7 +125,7 @@ QString IHttpPythonTestTask::getSourceRootScriptDir()
 void IHttpPythonTestTask::startTest()
 {   
     QProcess* process = new QProcess();
-    process->setWorkingDirectory(getScriptDir());
+    process->setWorkingDirectory(m_scriptDir);
 
     QStringList arguments;
     arguments << "--html=report.html"
@@ -133,7 +133,7 @@ void IHttpPythonTestTask::startTest()
 
     process->start("pytest", arguments);
     process->waitForFinished();
-    qDebug().noquote() << QString(process->readAll());
+    qDebug().noquote() << process->readAll();
     delete process;
     openTest();
 }
@@ -141,16 +141,15 @@ void IHttpPythonTestTask::startTest()
 void IHttpPythonTestTask::openTest()
 {
     QProcess* process = new QProcess();
-    process->setWorkingDirectory(getScriptDir());
+    process->setWorkingDirectory(m_scriptDir);
     process->start("cmd", QStringList{"/c", "start", "report.html"});
     process->waitForFinished();
-    qDebug() << QString(process->readAll());
     delete process;
 }
 
 void IHttpPythonTestTask::writeDebugInfo()
 {
-    auto path = getScriptDir() + "/common.py";
+    auto path = m_scriptDir + "/common.py";
 }
 
 $IPackageEnd(IPubCore, IHttpPythonTest)
