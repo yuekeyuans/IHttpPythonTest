@@ -1,16 +1,17 @@
 ﻿#include "IHttpPythonTestTask.h"
 #include "core/config/IContextImport.h"
+#include "core/config/IProfileImport.h"
 #include "core/application/IAsioApplication.h"
 
 $IPackageBegin(IPubCore, IHttpPythonTest)
 
 void IHttpPythonTestTask::$task()
 {
+    if(!isTaskEnabled()){
+        qDebug() << CLASS_NAME << "disabled";
+        return;
+    }
     std::thread thread([&](){
-        if(!isTaskEnabled()){
-            qDebug() << CLASS_NAME << "disabled";
-            return;
-        }
         checkPytestExist();
 
         m_scriptDir = getScriptDir();
@@ -26,9 +27,14 @@ void IHttpPythonTestTask::$task()
 
 bool IHttpPythonTestTask::isTaskEnabled()
 {
-    $ContextBool pyTestEnabled{"/test/pytest/enabled", true};
-    if(!pyTestEnabled.value()){
-        return false;
+    $ContextBool contextEnabled{"/test/pytest/enabled"};
+    if(contextEnabled.isLoadedValue()){
+        return *contextEnabled;
+    }
+
+    $Bool pyTestEnabled{"/test/pytest/enabled", true};
+    if(pyTestEnabled.isLoadedValue()){
+        return *pyTestEnabled;
     }
     return true;
 }
@@ -83,14 +89,21 @@ QString IHttpPythonTestTask::getScriptDir()
 
 QString IHttpPythonTestTask::getContextScriptDir()
 {
-    $ContextQString path{"/test/pytest/scriptDir"};
-    if(path.value().isEmpty()){
-        return {};
+    $ContextQString contextPath{"/test/pytest/scriptDir"};
+    if(contextPath.isLoadedValue()){
+        if(QDir(*contextPath).exists()){
+            return *contextPath;
+        }
     }
-    if(!QDir(path.value()).exists()){
-        qDebug() << path.value() << "script dir not exist";
+
+    $ProfileQString profilePath("/test/pytest/scriptDir");
+    if(profilePath.isLoadedValue()){
+        if(QDir(*profilePath).exists()){
+            return *profilePath;
+        }
     }
-    return path.value();
+
+    return {};
 }
 
 QString IHttpPythonTestTask::getApplicationScriptDir()
@@ -124,6 +137,7 @@ QString IHttpPythonTestTask::getSourceRootScriptDir()
 
 void IHttpPythonTestTask::startTest()
 {   
+    qDebug() << "start to test";
     QProcess* process = new QProcess();
     process->setWorkingDirectory(m_scriptDir);
 
@@ -140,6 +154,7 @@ void IHttpPythonTestTask::startTest()
 
 void IHttpPythonTestTask::openTest()
 {
+    qDebug() << "test end, open report";
     QProcess* process = new QProcess();
     process->setWorkingDirectory(m_scriptDir);
     process->start("cmd", QStringList{"/c", "start", "report.html"});
