@@ -27,7 +27,7 @@ private:
 private:
     void startTest();
     void openTest();
-    void writeDebugInfo();
+    void writeConfig();
 
 private:
     QString m_scriptDir;

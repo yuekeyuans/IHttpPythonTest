@@ -18,7 +18,7 @@ void IHttpPythonTestTask::$task()
             qDebug() << CLASS_NAME << "script dir not exist";
             return;
         }
-
+        writeConfig();
         startTest();
     });
     thread.detach();
@@ -147,9 +147,20 @@ void IHttpPythonTestTask::openTest()
     delete process;
 }
 
-void IHttpPythonTestTask::writeDebugInfo()
+void IHttpPythonTestTask::writeConfig()
 {
-    auto path = m_scriptDir + "/common.py";
+    auto path = m_scriptDir + "/ServerConfig.py";
+    QFile file(path);
+    file.open(QFile::WriteOnly);
+    QTextStream stream(&file);
+
+    $ContextQString ip{"/runtime/ip"};
+    $ContextInt port{"/runtime/port"};
+    stream << "port=\"" << *port << "\"" << endl;
+    stream << "ip=\"" << *ip << "\"" << endl;
+    stream << "serverAddress=\"http://" << *ip << ":" << *port << "\"" << endl;
+
+    file.close();
 }
 
 $IPackageEnd(IPubCore, IHttpPythonTest)
