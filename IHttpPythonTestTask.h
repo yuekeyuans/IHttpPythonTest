@@ -15,7 +15,6 @@ public:
     virtual void $task() final;
 
 private:
-    bool isTaskEnabled();
     void checkPytestExist();
 
 private:

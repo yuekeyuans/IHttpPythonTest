@@ -7,36 +7,24 @@ $IPackageBegin(IPubCore, IHttpPythonTest)
 
 void IHttpPythonTestTask::$task()
 {
-    if(!isTaskEnabled()){
-        qDebug() << CLASS_NAME << "disabled";
+    $ContextBool contextEnabled{"/test/pytest/enabled", false};
+    if(!(*contextEnabled)){
+        qDebug() << QString::fromStdString(CLASS_NAME) << "disabled";
         return;
     }
+
     std::thread thread([&](){
         checkPytestExist();
 
         m_scriptDir = getScriptDir();
         if(m_scriptDir.isEmpty()){
-            qDebug() << CLASS_NAME << "script dir not exist";
+            qDebug() << QString::fromStdString(CLASS_NAME) << "script dir not exist";
             return;
         }
         writeConfig();
         startTest();
     });
     thread.detach();
-}
-
-bool IHttpPythonTestTask::isTaskEnabled()
-{
-    $ContextBool contextEnabled{"/test/pytest/enabled"};
-    if(contextEnabled.isLoadedValue()){
-        return *contextEnabled;
-    }
-
-    $Bool pyTestEnabled{"/test/pytest/enabled", true};
-    if(pyTestEnabled.isLoadedValue()){
-        return *pyTestEnabled;
-    }
-    return true;
 }
 
 void IHttpPythonTestTask::checkPytestExist()
@@ -137,7 +125,8 @@ QString IHttpPythonTestTask::getSourceRootScriptDir()
 
 void IHttpPythonTestTask::startTest()
 {   
-    qDebug() << "start to test";
+    qDebug() << "start to run pytest";
+    qDebug() << "path at" << m_scriptDir;
     QProcess* process = new QProcess();
     process->setWorkingDirectory(m_scriptDir);
 
@@ -154,7 +143,6 @@ void IHttpPythonTestTask::startTest()
 
 void IHttpPythonTestTask::openTest()
 {
-    qDebug() << "test end, open report";
     QProcess* process = new QProcess();
     process->setWorkingDirectory(m_scriptDir);
     process->start("cmd", QStringList{"/c", "start", "report.html"});
